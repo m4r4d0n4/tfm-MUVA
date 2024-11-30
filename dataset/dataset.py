@@ -61,9 +61,18 @@ class WikiArtTripletDataset(Dataset):
         }
 
 # Create DataLoader
-#dataset = WikiArtTripletDataset()
+dataset = WikiArtTripletDataset()
 #dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
-
+for i in range(10):
+    try:
+        sample = dataset[i]
+        print(f"Sample {i} loaded successfully")
+        print(f"Anchor shape: {sample['anchor'].shape}")
+        print(f"Positive shape: {sample['positive'].shape}")
+        print(f"Negative shape: {sample['negative'].shape}")
+    except Exception as e:
+        print(f"Error at sample {i}: {e}")
+        break
 
 
 
