@@ -37,7 +37,8 @@ class WikiArtTripletDataset(Dataset):
         ])
 
     def __len__(self):
-        return len(self.ds)
+        #return len(self.ds)
+        return 1000
 
     def __getitem__(self, idx):
         anchor = self.ds[idx]
