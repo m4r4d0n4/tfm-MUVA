@@ -27,6 +27,8 @@ class WikiArtTripletDataset(Dataset):
         for i, item in enumerate(self.ds):
             print("Dataset number {i}")
             self.artist_to_indices[item['artist']].append(i)
+            if i == 1000: #Check training worikng
+                break
         
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
