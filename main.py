@@ -6,7 +6,7 @@ from dataset.dataset import WikiArtTripletDataset
 
 
 dataset = WikiArtTripletDataset()
-dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=4)
+dataloader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=4)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = SiameseViT().to(device)
