@@ -21,9 +21,9 @@ import random
 
 class WikiArtTripletDataset(Dataset):
     def __init__(self, split="train"):
+        self.ds = load_dataset("huggan/wikiart", split=split)
         len_dataset = len(self.ds)
         print(f"Imagenes totales {len_dataset}")
-        self.ds = load_dataset("huggan/wikiart", split=split)
         self.artists = list(set(self.ds['artist']))
         self.artist_to_indices = {artist: [] for artist in self.artists}
         for i, item in enumerate(self.ds):
