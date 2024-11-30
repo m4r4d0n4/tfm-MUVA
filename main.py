@@ -6,7 +6,7 @@ from dataset.dataset import WikiArtTripletDataset
 
 
 dataset = WikiArtTripletDataset()
-dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
+dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=4)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = SiameseViT().to(device)
@@ -21,7 +21,8 @@ for epoch in range(num_epochs):
     print(f"Epoca numero {epoch}")
     model.train()
     total_loss = 0
-    for batch in dataloader:
+    for i,batch in enumerate(dataloader):
+        print(f"Batch numero {i}")     
         anchor = batch['anchor'].to(device)
         positive = batch['positive'].to(device)
         negative = batch['negative'].to(device)
