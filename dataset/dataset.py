@@ -72,7 +72,6 @@ for i in range(10):
         print(f"Negative shape: {sample['negative'].shape}")
     except Exception as e:
         print(f"Error at sample {i}: {e}")
-        break
 
 
 
