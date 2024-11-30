@@ -18,7 +18,7 @@ num_epochs = 10
 print("Training started")
 
 for epoch in range(num_epochs):
-    print("Epoca numero {epoch}")
+    print(f"Epoca numero {epoch}")
     model.train()
     total_loss = 0
     for batch in dataloader:
