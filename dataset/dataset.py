@@ -21,14 +21,14 @@ import random
 
 class WikiArtTripletDataset(Dataset):
     def __init__(self, split="train"):
+        len_dataset = len(self.ds)
+        print(f"Imagenes totales {len_dataset}")
         self.ds = load_dataset("huggan/wikiart", split=split)
         self.artists = list(set(self.ds['artist']))
         self.artist_to_indices = {artist: [] for artist in self.artists}
         for i, item in enumerate(self.ds):
             print(f"Dataset number {i}")
             self.artist_to_indices[item['artist']].append(i)
-            if i == 1000: #Check training worikng
-                break
         
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
@@ -37,8 +37,7 @@ class WikiArtTripletDataset(Dataset):
         ])
 
     def __len__(self):
-        #return len(self.ds)
-        return 1000
+        return len(self.ds)
 
     def __getitem__(self, idx):
         anchor = self.ds[idx]
@@ -59,7 +58,7 @@ class WikiArtTripletDataset(Dataset):
             'negative': self.transform(negative['image']),
             'artist': anchor_artist
         }
-
+'''
 # Create DataLoader
 dataset = WikiArtTripletDataset()
 #dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
@@ -71,7 +70,7 @@ for i in range(10):
         print(f"Positive shape: {sample['positive'].shape}")
         print(f"Negative shape: {sample['negative'].shape}")
     except Exception as e:
-        print(f"Error at sample {i}: {e}")
+        print(f"Error at sample {i}: {e}")'''
 
 
 
