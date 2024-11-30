@@ -25,6 +25,7 @@ class WikiArtTripletDataset(Dataset):
         self.artists = list(set(self.ds['artist']))
         self.artist_to_indices = {artist: [] for artist in self.artists}
         for i, item in enumerate(self.ds):
+            print("Dataset number {i}")
             self.artist_to_indices[item['artist']].append(i)
         
         self.transform = transforms.Compose([
