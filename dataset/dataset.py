@@ -21,18 +21,18 @@ import random
 
 class WikiArtTripletDataset(Dataset):
     def __init__(self, split="train", siamese=False, validation_split=0.2):
-        # Load the training dataset
-        self.train_ds = load_dataset("huggan/wikiart", split="train")
+        # Load the entire dataset
+        ds = load_dataset("huggan/wikiart", split="train")
 
-        # Split into training and validation sets
-        split_ds = self.train_ds.train_test_split(test_size=validation_split, seed=42)
-        self.train_ds = split_ds["train"]
-        self.val_ds = split_ds["test"]
+        # Split the dataset into training and validation sets
+        split_ds = ds.train_test_split(test_size=validation_split, seed=42)
+        train_ds = split_ds["train"]
+        val_ds = split_ds["test"]
 
         if split == "train":
-            self.ds = self.train_ds
+            self.ds = train_ds
         elif split == "validation":
-            self.ds = self.val_ds
+            self.ds = val_ds
         else:
             raise ValueError("Invalid split. Must be 'train' or 'validation'")
 
