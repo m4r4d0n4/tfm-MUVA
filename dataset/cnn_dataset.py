@@ -9,7 +9,7 @@ class WikiArtCNNDataset(Dataset):
         ds = load_dataset("huggan/wikiart", split="train")
 
         # Split into training and validation sets
-        split_ds = self.ds.train_test_split(test_size=validation_split, seed=42)
+        split_ds = ds.train_test_split(test_size=validation_split, seed=42)
         train_ds = split_ds["train"]
         val_ds = split_ds["test"]
 
