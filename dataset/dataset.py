@@ -37,12 +37,9 @@ class WikiArtTripletDataset(Dataset):
         else:
             raise ValueError("Invalid split. Must be 'train' or 'validation'")
         
-        len_dataset = len(self.ds)
-        print(f"Imagenes totales {len_dataset}")
         self.artists = list(set(self.ds['artist']))
         self.artist_to_indices = {artist: [] for artist in self.artists}
         for i, item in enumerate(self.ds):
-            print(f"Dataset number {i}")
             self.artist_to_indices[item['artist']].append(i)
         
         self.transform = transforms.Compose([

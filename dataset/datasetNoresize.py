@@ -20,14 +20,27 @@ from torchvision import transforms
 import random
 
 class WikiArtTripletDatasetNoResize(Dataset):
-    def __init__(self, split="train"):
-        self.ds = load_dataset("huggan/wikiart", split=split)
+    def __init__(self, split="train", validation_split=0.2):
+        # Load the entire dataset
+        self.ds = load_dataset("huggan/wikiart", split="train")
+        
+        # Split the dataset into training and validation sets
+        split_ds = self.ds.train_test_split(test_size=validation_split, seed=42)
+        self.train_ds = split_ds['train']
+        self.val_ds = split_ds['test']
+        
+        # Select the appropriate split
+        if split == "train":
+            self.ds = self.train_ds
+        elif split == "validation":
+            self.ds = self.val_ds
+        else:
+            raise ValueError("Invalid split. Must be 'train' or 'validation'")
+        
         len_dataset = len(self.ds)
-        print(f"Imagenes totales {len_dataset}")
         self.artists = list(set(self.ds['artist']))
         self.artist_to_indices = {artist: [] for artist in self.artists}
         for i, item in enumerate(self.ds):
-            print(f"Dataset number {i}")
             self.artist_to_indices[item['artist']].append(i)
         
         self.transform = transforms.Compose([
@@ -58,6 +71,9 @@ class WikiArtTripletDatasetNoResize(Dataset):
             'negative': self.transform(negative['image']),
             'artist': anchor_artist
         }
+
+    def get_artists(self):
+        return self.artists
 '''
 # Create DataLoader
 dataset = WikiArtTripletDataset()
