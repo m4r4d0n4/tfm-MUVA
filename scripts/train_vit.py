@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from ..dataset.cnn_dataset import WikiArtCNNDataset
+from dataset.cnn_dataset import WikiArtCNNDataset
 from model.vit_finetune import ViTFineTune
 import matplotlib.pyplot as plt
 import os
