@@ -2,8 +2,8 @@ import torch.optim as optim
 import torch
 import time
 from torch.utils.data import DataLoader
-from model.siameseAdaptative import SiameseArtNet, AdaptiveTripletLoss
-from dataset.datasetNoresize import WikiArtTripletDatasetNoResize
+from ..model.siameseAdaptative import SiameseArtNet, AdaptiveTripletLoss
+from ..dataset.datasetNoresize import WikiArtTripletDatasetNoResize
 
 def custom_collate_fn(batch):
     anchors = [item['anchor'] for item in batch]

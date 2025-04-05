@@ -9,6 +9,7 @@ from model.siamvit import SiameseViT
 from model.cnn_finetune import ResNet50FineTune
 from model.siamese_resnet import SiameseResNet50
 from dataset.dataset import WikiArtTripletDataset
+from scripts.create_embedding_db import create_embedding_database
 
 class EmbeddingDatabase:
     def __init__(self, model_type='siamese_vit', model_path='siamese_vit_wikiart.pth'):

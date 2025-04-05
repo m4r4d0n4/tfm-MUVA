@@ -1,8 +1,8 @@
 import torch.optim as optim
 import torch
 from torch.utils.data import DataLoader
-from model.siamvit import SiameseViT, TripletLoss
-from dataset.dataset import WikiArtTripletDataset
+from ..model.siamvit import SiameseViT, TripletLoss
+from ..dataset.dataset import WikiArtTripletDataset
 
 
 dataset = WikiArtTripletDataset()
