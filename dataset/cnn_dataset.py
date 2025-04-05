@@ -13,7 +13,7 @@ class WikiArtCNNDataset(Dataset):
         train_ds = split_ds["train"]
         val_ds = split_ds["test"]
 
-        self.artists = list(set(self.ds["artist"]))
+        self.artists = list(set(train_ds["artist"]))
         self.artist_to_index = {artist: i for i, artist in enumerate(self.artists)}
 
         if split == "train":
