@@ -4,6 +4,8 @@ import time
 from torch.utils.data import DataLoader
 from ..model.siameseAdaptative import SiameseArtNet, AdaptiveTripletLoss
 from ..dataset.datasetNoresize import WikiArtTripletDatasetNoResize
+import matplotlib.pyplot as plt
+import os
 
 def custom_collate_fn(batch):
     anchors = [item['anchor'] for item in batch]
@@ -30,6 +32,9 @@ num_epochs = 2
 
 print("Training started")
 start_time = time.time()  # Guarda el tiempo de inicio
+
+# Store the loss values for plotting
+loss_values = []
 
 for epoch in range(num_epochs):
     epoch_start = time.time()  # Tiempo de inicio de la época
@@ -62,6 +67,19 @@ for epoch in range(num_epochs):
     print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {total_loss/len(dataloader):.4f}")
     print(f"Tiempo de esta época: {epoch_duration:.2f}s")
     print(f"Tiempo estimado restante: {remaining_time/60:.2f} min\n")
+    loss_values.append(total_loss/len(dataloader))
+
+# Create the graphs directory if it doesn't exist
+if not os.path.exists("graphs"):
+    os.makedirs("graphs")
 
 # Save the model
 torch.save(model.state_dict(), 'siameseadaptative_vit_wikiart.pth')
+
+# Plot the loss values
+plt.plot(loss_values)
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Training Loss")
+plt.savefig("graphs/train_siamese_adaptative_loss.png")
+plt.close()

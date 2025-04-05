@@ -4,6 +4,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from dataset.cnn_dataset import WikiArtCNNDataset
 from model.vit_finetune import ViTFineTune
+import matplotlib.pyplot as plt
+import os
 
 # Define the device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -20,10 +22,17 @@ model = ViTFineTune(num_classes).to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
+# Create the graphs directory if it doesn't exist
+if not os.path.exists("graphs"):
+    os.makedirs("graphs")
+
 # Training loop
 num_epochs = 10
 
 print("Training started")
+
+# Store the loss values for plotting
+loss_values = []
 
 for epoch in range(num_epochs):
     print(f"Epoch {epoch+1}/{num_epochs}")
@@ -48,9 +57,18 @@ for epoch in range(num_epochs):
         
         if (i+1) % 10 == 0:
             print(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(dataloader)}], Loss: {running_loss/10:.4f}")
+            loss_values.append(running_loss / 10)
             running_loss = 0.0
 
 print("Finished Training")
 
 # Save the model
 torch.save(model.state_dict(), 'vit_finetuned.pth')
+
+# Plot the loss values
+plt.plot(loss_values)
+plt.xlabel("Step (x10)")
+plt.ylabel("Loss")
+plt.title("Training Loss")
+plt.savefig("graphs/train_vit_loss.png")
+plt.close()
