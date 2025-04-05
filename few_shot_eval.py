@@ -82,6 +82,66 @@ class FewShotEvaluator:
         # For now, just print the number of query embeddings
         print(f"Number of query embeddings: {len(query_embeddings)}")
 
+        accuracy = self.calculate_accuracy(query_embeddings, self.embeddings, self.artists, self.class_names, self.num_classes, self.num_query)
+        map_at_k = self.calculate_mean_average_precision(query_embeddings, self.embeddings, self.artists, self.class_names, self.num_classes, self.num_query)
+        generalization_gap = self.calculate_generalization_gap(query_embeddings, self.embeddings, self.artists, self.class_names, self.num_classes, self.num_query)
+
+        print(f"Few-Shot Accuracy: {accuracy}")
+        print(f"Mean Average Precision (mAP@K): {map_at_k}")
+        print(f"Few-Shot Generalization Gap: {generalization_gap}")
+
+    def calculate_accuracy(self, query_embeddings: List[np.ndarray], embeddings: np.ndarray, artists: np.ndarray, class_names: List[str], num_classes: int, num_query: int, k: int = 1) -> float:
+        """Calculates the few-shot accuracy (N-shot-K-way)."""
+        correct = 0
+        total = 0
+        for class_index in range(num_classes):
+            for i in range(num_query):
+                query_embedding = query_embeddings[class_index * num_query + i]
+                # Calculate distances to all embeddings in the database
+                distances = np.linalg.norm(embeddings - query_embedding, axis=1)
+                # Get the indices of the k-nearest neighbors
+                knn_indices = np.argsort(distances)[:k]
+                # Get the predicted class names of the k-nearest neighbors
+                knn_labels = artists[knn_indices]
+                # Determine the most frequent class among the k-nearest neighbors
+                predicted_class = np.argmax(np.bincount(np.array([class_names.index(label) for label in knn_labels])))
+                # Check if the prediction is correct
+                if predicted_class == class_index:
+                    correct += 1
+                total += 1
+        return correct / total
+
+    def calculate_mean_average_precision(self, query_embeddings: List[np.ndarray], embeddings: np.ndarray, artists: np.ndarray, class_names: List[str], num_classes: int, num_query: int, k: int = 10) -> float:
+        """Calculates the Mean Average Precision (mAP@K)."""
+        map_sum = 0
+        for class_index in range(num_classes):
+            ap_sum = 0
+            for i in range(num_query):
+                query_embedding = query_embeddings[class_index * num_query + i]
+                # Calculate distances to all embeddings in the database
+                distances = np.linalg.norm(embeddings - query_embedding, axis=1)
+                # Get the indices of the k-nearest neighbors
+                knn_indices = np.argsort(distances)[:k]
+                # Get the predicted class names of the k-nearest neighbors
+                knn_labels = artists[knn_indices]
+                # Calculate precision at each rank
+                precision_sum = 0
+                num_correct = 0
+                for j in range(k):
+                    if class_names.index(artists[class_index * num_query + i]) == np.argmax(np.bincount(np.array([class_names.index(label) for label in knn_labels[:j+1]]))):
+                        num_correct += 1
+                    precision_sum += num_correct / (j + 1)
+                ap_sum += precision_sum / k
+            map_sum += ap_sum / num_query
+        return map_sum / num_classes
+
+    def calculate_generalization_gap(self, query_embeddings: List[np.ndarray], embeddings: np.ndarray, artists: np.ndarray, class_names: List[str], num_classes: int, num_query: int, k: int = 1) -> float:
+        """Calculates the Few-Shot Generalization Gap."""
+        accuracy = self.calculate_accuracy(query_embeddings, embeddings, artists, class_names, num_classes, num_query, k)
+        # For now, assume a fixed baseline accuracy (replace with actual baseline if available)
+        baseline_accuracy = 0.5
+        return accuracy - baseline_accuracy
+
 if __name__ == '__main__':
     # Example usage
     evaluator = FewShotEvaluator(database_path="wikiart_embeddings.npz", model_name="siamese_resnet")
