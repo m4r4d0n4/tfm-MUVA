@@ -1,8 +1,12 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from dataset.dataset import WikiArtTripletDataset
+from ..dataset.dataset import WikiArtTripletDataset
 from model.siamese_resnet import SiameseResNet50, contrastive_loss
 import matplotlib.pyplot as plt
 import os
