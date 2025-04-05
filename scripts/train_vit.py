@@ -34,7 +34,7 @@ if not os.path.exists("graphs"):
     os.makedirs("graphs")
 
 # Training loop
-num_epochs = 1
+num_epochs = 10
 
 print("Training started")
 start_time = time.time()
