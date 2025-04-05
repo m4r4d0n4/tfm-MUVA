@@ -27,8 +27,8 @@ def custom_collate_fn(batch):
 
 train_dataset =  WikiArtTripletDatasetNoResize(split="train")
 val_dataset = WikiArtTripletDatasetNoResize(split="validation")
-train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=4,collate_fn=custom_collate_fn)
-val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=4,collate_fn=custom_collate_fn)
+train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=10, collate_fn=custom_collate_fn)
+val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=10, collate_fn=custom_collate_fn)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = SiameseArtNet().to(device)

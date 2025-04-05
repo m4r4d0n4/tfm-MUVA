@@ -18,8 +18,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Load the datasets
 train_dataset = WikiArtTripletDataset(split="train", siamese=True)
 val_dataset = WikiArtTripletDataset(split="validation", siamese=True)
-train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
-val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
+train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=10)
+val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=10)
 
 # Load the model
 embedding_dim = 128
