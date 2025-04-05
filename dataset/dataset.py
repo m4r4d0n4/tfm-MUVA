@@ -20,7 +20,7 @@ from torchvision import transforms
 import random
 
 class WikiArtTripletDataset(Dataset):
-    def __init__(self, split="train"):
+    def __init__(self, split="train", siamese=False):
         self.ds = load_dataset("huggan/wikiart", split=split)
         len_dataset = len(self.ds)
         print(f"Imagenes totales {len_dataset}")
@@ -35,6 +35,8 @@ class WikiArtTripletDataset(Dataset):
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
+        self.siamese = siamese
+        self.rng = random.Random(42) # consistent results
 
     def __len__(self):
         return len(self.ds)
@@ -43,20 +45,29 @@ class WikiArtTripletDataset(Dataset):
         anchor = self.ds[idx]
         anchor_artist = anchor['artist']
         
-        # Get a positive sample (same artist)
-        positive_idx = random.choice([i for i in self.artist_to_indices[anchor_artist] if i != idx])
-        positive = self.ds[positive_idx]
-        
-        # Get a negative sample (different artist)
-        negative_artist = random.choice([a for a in self.artists if a != anchor_artist])
-        negative_idx = random.choice(self.artist_to_indices[negative_artist])
-        negative = self.ds[negative_idx]
+        # Get a positive sample (same artist) or a negative sample (different artist)
+        same_artist = self.rng.random() < 0.5
+        if same_artist:
+            positive_idx = self.rng.choice([i for i in self.artist_to_indices[anchor_artist] if i != idx])
+            positive = self.ds[positive_idx]
+            
+            anchor_image = self.transform(anchor['image'])
+            positive_image = self.transform(positive['image'])
+            label = 1
+        else:
+            negative_artist = self.rng.choice([a for a in self.artists if a != anchor_artist])
+            negative_idx = self.rng.choice(self.artist_to_indices[negative_artist])
+            negative = self.ds[negative_idx]
+            
+            anchor_image = self.transform(anchor['image'])
+            positive_image = self.transform(negative['image'])
+            label = 0
         
         return {
-            'anchor': self.transform(anchor['image']),
-            'positive': self.transform(positive['image']),
-            'negative': self.transform(negative['image']),
-            'artist': anchor_artist
+            'anchor': anchor_image,
+            'positive': positive_image,
+            'label': torch.tensor(label, dtype=torch.float32),
+            'artist': anchor_artist #keep artist for triplet loss
         }
 '''
 # Create DataLoader
@@ -71,32 +82,6 @@ for i in range(10):
         print(f"Negative shape: {sample['negative'].shape}")
     except Exception as e:
         print(f"Error at sample {i}: {e}")'''
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # Load the dataset in streaming mode
 ds = load_dataset("huggan/wikiart", split="train", streaming=True)
@@ -115,7 +100,6 @@ print(f"Artist: {item['artist']}")
 print(f"Style: {item['style']}")
 
 img = item['image']
-
 
 # Save the image as PNG
 filename = f"wikiart_images/test.png"

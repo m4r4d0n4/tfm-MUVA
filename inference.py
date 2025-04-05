@@ -1,32 +1,41 @@
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
-
-from model.cnn_finetune import ResNet50FineTune
-from dataset.cnn_dataset import WikiArtCNNDataset
 import numpy as np
 
-def load_model(model_path='resnet50_finetuned.pth'):
+from model.siamvit import SiameseViT
+from model.cnn_finetune import ResNet50FineTune
+from model.siamese_resnet import SiameseResNet50
+
+def load_model(model_type='siamese_vit', model_path='siamese_vit_wikiart.pth'):
     """
-    Load the pre-trained ResNet50 model
+    Load the pre-trained model
     
     Args:
+        model_type (str): Type of model to use ('siamese_vit', 'resnet50', 'siamese_resnet')
         model_path (str): Path to the saved model weights
     
     Returns:
-        ResNet50 model loaded with pre-trained weights
+        Loaded model
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset = WikiArtCNNDataset(split="train")
-    num_classes = dataset.get_num_classes()
-    model = ResNet50FineTune(num_classes=num_classes).to(device)
+    
+    if model_type == 'siamese_vit':
+        model = SiameseViT().to(device)
+    elif model_type == 'resnet50':
+        model = ResNet50FineTune().to(device)
+    elif model_type == 'siamese_resnet':
+        model = SiameseResNet50().to(device)
+    else:
+        raise ValueError(f"Invalid model_type: {model_type}")
+        
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()  # Set the model to evaluation mode
     return model
 
 def preprocess_image(image_path, img_size=224):
     """
-    Preprocess an image for the ResNet50 model
+    Preprocess an image for the Siamese ViT model
     
     Args:
         image_path (str): Path to the image file
@@ -35,8 +44,6 @@ def preprocess_image(image_path, img_size=224):
     Returns:
         Preprocessed image tensor
     """
-    import torchvision.transforms as transforms
-    from PIL import Image
     transform = transforms.Compose([
         transforms.Resize((img_size, img_size)),
         transforms.ToTensor(),
@@ -49,12 +56,12 @@ def preprocess_image(image_path, img_size=224):
     image = Image.open(image_path).convert('RGB')
     return transform(image).unsqueeze(0)  # Add batch dimension
 
-def compute_image_embedding(model, image_path):
+def compute_image_embedding(model, image_path, model_type='siamese_vit'):
     """
     Compute embedding for a single image
     
     Args:
-        model (ResNet50FineTune): Loaded ResNet50 model
+        model: Loaded model
         image_path (str): Path to the image file
     
     Returns:
@@ -64,7 +71,12 @@ def compute_image_embedding(model, image_path):
     image_tensor = preprocess_image(image_path).to(device)
     
     with torch.no_grad():
-        embedding = model.get_embedding(image_tensor)
+        if model_type == 'siamese_vit':
+            embedding = model.encode_image(image_tensor)
+        elif model_type == 'resnet50':
+            embedding = model.get_embedding(image_tensor)
+        elif model_type == 'siamese_resnet':
+            embedding = model.get_embedding(image_tensor)
     
     return embedding.cpu().numpy()
 
@@ -85,17 +97,18 @@ def compute_similarity(embedding1, embedding2):
 
 def main():
     """
-    Example usage of the ResNet50 model for inference
+    Example usage of the Siamese ViT model for inference
     """
     # Load the pre-trained model
-    model = load_model()
+    model_type = 'siamese_resnet'
+    model = load_model(model_type=model_type, model_path='siamese_resnet50_finetuned.pth')
     
     # Example: Compute embeddings for two images
     image1_path = './wikiart_images/test.png'
     image2_path = './wikiart_images/test.png'
     
-    embedding1 = compute_image_embedding(model, image1_path)
-    embedding2 = compute_image_embedding(model, image2_path)
+    embedding1 = compute_image_embedding(model, image1_path, model_type=model_type)
+    embedding2 = compute_image_embedding(model, image2_path, model_type=model_type)
     
     # Compute similarity
     similarity = compute_similarity(embedding1, embedding2)

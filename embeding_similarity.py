@@ -6,26 +6,41 @@ from tqdm import tqdm
 from typing import List, Tuple
 
 from model.siamvit import SiameseViT
+from model.cnn_finetune import ResNet50FineTune
+from model.siamese_resnet import SiameseResNet50
 from dataset.dataset import WikiArtTripletDataset
 
 class EmbeddingDatabase:
-    def __init__(self, model_path='siamese_vit_wikiart.pth', embedding_dim=768):
+    def __init__(self, model_type='siamese_vit', model_path='siamese_vit_wikiart.pth'):
         """
         Initialize embedding database with Faiss index
         
         Args:
+            model_type (str): Type of model to use ('siamese_vit', 'resnet50', 'siamese_resnet')
             model_path (str): Path to pre-trained model
-            embedding_dim (int): Dimensionality of embedding vectors
         """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model_type = model_type
         
-        # Load pre-trained model
-        self.model = SiameseViT().to(self.device)
-        self.model.load_state_dict(torch.load(model_path, map_location=self.device))
+        if model_type == 'siamese_vit':
+            self.model = SiameseViT().to(self.device)
+            self.model.load_state_dict(torch.load(model_path, map_location=self.device))
+            self.embedding_dim = 768
+        elif model_type == 'resnet50':
+            self.model = ResNet50FineTune().to(self.device)
+            self.model.load_state_dict(torch.load(model_path, map_location=self.device))
+            self.embedding_dim = 2048
+        elif model_type == 'siamese_resnet':
+            self.model = SiameseResNet50().to(self.device)
+            self.model.load_state_dict(torch.load(model_path, map_location=self.device))
+            self.embedding_dim = 128
+        else:
+            raise ValueError(f"Invalid model_type: {model_type}")
+        
         self.model.eval()
         
         # Create Faiss index (using GPU if available)
-        self.index = faiss.IndexFlatL2(embedding_dim)  # L2 distance
+        self.index = faiss.IndexFlatL2(self.embedding_dim)  # L2 distance
         
         # Store metadata
         self.embeddings = []
@@ -69,7 +84,12 @@ class EmbeddingDatabase:
         image_tensor = preprocess_image(image_path).to(self.device)
         
         with torch.no_grad():
-            embedding = self.model.encode_image(image_tensor)
+            if self.model_type == 'siamese_vit':
+                embedding = self.model.vit(image_tensor)
+            elif self.model_type == 'resnet50':
+                embedding = self.model.get_embedding(image_tensor)
+            elif self.model_type == 'siamese_resnet':
+                embedding = self.model.get_embedding(image_tensor)
         
         return embedding.cpu().numpy().flatten()
     
@@ -145,7 +165,7 @@ def preprocess_image(image_path, img_size=224):
 
 def main():
     # Create or load embedding database
-    db = EmbeddingDatabase()
+    db = EmbeddingDatabase(model_type='siamese_resnet', model_path='siamese_resnet50_finetuned.pth')
     
     # Generate embeddings from a large image folder
     db.generate_embeddings('./wikiart_images')
@@ -154,7 +174,7 @@ def main():
     #db.save_index('wikiart_embeddings')
     
     # Search similar images
-    query_image = './wikiart_images/test.jpg'
+    query_image = './wikiart_images/test.png'
     similar_images = db.search_similar_images(query_image, top_k=5)
     
     print("Similar Artists:")
