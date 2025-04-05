@@ -12,7 +12,7 @@ from model.cnn_finetune import ResNet50FineTune
 from model.siamese_resnet import SiameseResNet50
 from inference import load_model, preprocess_image, compute_image_embedding
 
-def find_closest_embedding(image_path: str, model_name: str, database_path: str, search_method: str = 'cosine') -> Tuple[str, float]:
+def find_closest_embedding(image_path: str, model_name: str, database_path: str, search_method: str = 'cosine') -> Tuple[str, float, int]:
     """
     Finds the closest embedding in a database to a given image.
 
@@ -23,7 +23,7 @@ def find_closest_embedding(image_path: str, model_name: str, database_path: str,
         search_method (str): Method to use for searching the closest embedding ('cosine', 'euclidean').
 
     Returns:
-        Tuple[str, float]: Tuple containing the artist name of the closest embedding and the distance.
+        Tuple[str, float, int]: Tuple containing the artist name, distance, and image ID of the closest embedding.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -36,26 +36,13 @@ def find_closest_embedding(image_path: str, model_name: str, database_path: str,
         database = np.load(database_path)
         embeddings = database['embeddings']
         artists = database['artists']
+        image_ids = database['image_ids']
     except FileNotFoundError:
         raise FileNotFoundError(f"Embedding database not found at {database_path}")
 
     # Preprocess the image and compute its embedding
     image = preprocess_image(image_path).to(device)
     embedding = compute_image_embedding(model, image, model_name).cpu().numpy()
-
-    def cosine_similarity(embedding, embeddings):
-        embedding = embedding / np.linalg.norm(embedding)
-        embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
-        distances = np.dot(embeddings, embedding.T).flatten()
-        closest_index = np.argmax(distances)
-        distance = distances[closest_index]  # Similarity score
-        return closest_index, distance
-
-    def euclidean_distance(embedding, embeddings):
-        distances = np.linalg.norm(embeddings - embedding, axis=1)
-        closest_index = np.argmin(distances)
-        distance = distances[closest_index]
-        return closest_index, distance
 
     # Search for the closest embedding
     if search_method == 'cosine':
@@ -66,8 +53,23 @@ def find_closest_embedding(image_path: str, model_name: str, database_path: str,
         raise ValueError(f"Invalid search method: {search_method}")
 
     closest_artist = artists[closest_index]
+    closest_image_id = image_ids[closest_index]
 
-    return closest_artist, distance
+    return closest_artist, distance, closest_image_id
+
+def cosine_similarity(embedding, embeddings):
+    embedding = embedding / np.linalg.norm(embedding)
+    embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+    distances = np.dot(embeddings, embedding.T).flatten()
+    closest_index = np.argmax(distances)
+    distance = distances[closest_index]  # Similarity score
+    return closest_index, distance
+
+def euclidean_distance(embedding, embeddings):
+    distances = np.linalg.norm(embeddings - embedding, axis=1)
+    closest_index = np.argmin(distances)
+    distance = distances[closest_index]
+    return closest_index, distance
 
 
 def main():
@@ -80,8 +82,8 @@ def main():
     args = parser.parse_args()
 
     try:
-        closest_artist, distance = find_closest_embedding(args.image_path, args.model_name, args.database_path, args.search_method)
-        print(f"Closest artist: {closest_artist}, Distance: {distance}")
+        closest_artist, distance, image_id = find_closest_embedding(args.image_path, args.model_name, args.database_path, args.search_method)
+        print(f"Closest artist: {closest_artist}, Distance: {distance}, Image ID: {image_id}")
     except Exception as e:
         print(f"Error: {e}")
 
