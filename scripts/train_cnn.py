@@ -1,6 +1,7 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import time
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -33,6 +34,7 @@ if not os.path.exists("graphs"):
 num_epochs = 10
 
 print("Training started")
+start_time = time.time()
 
 # Store the loss values for plotting
 loss_values = []
@@ -57,9 +59,15 @@ for epoch in range(num_epochs):
         optimizer.step()
         
         running_loss += loss.item()
+
+        # Calculate estimated remaining time
+        batches_done = (epoch * len(dataloader) + i)
+        batches_left = num_epochs * len(dataloader) - batches_done
+        time_per_batch = (time.time() - start_time) / (batches_done + 1)
+        remaining_time = batches_left * time_per_batch
         
         if (i+1) % 10 == 0:
-            print(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(dataloader)}], Loss: {running_loss/10:.4f}")
+            print(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(dataloader)}], Loss: {running_loss/10:.4f}, Remaining time: {remaining_time/60:.2f} min")
             loss_values.append(running_loss / 10)
             running_loss = 0.0
 
