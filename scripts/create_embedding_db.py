@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 import argparse
 
-from dataset.cnn_dataset import WikiArtCNNDataset
+from ..dataset.cnn_dataset import WikiArtCNNDataset
 from dataset.dataset import WikiArtTripletDataset
 from inference import load_model, preprocess_image, compute_image_embedding
 
