@@ -40,6 +40,8 @@ start_time = time.time()
 
 # Store the loss values for plotting
 loss_values = []
+val_loss_values = []
+val_accuracy_values = []
 
 for epoch in range(num_epochs):
     print(f"Epoch {epoch+1}/{num_epochs}")
@@ -90,6 +92,8 @@ for epoch in range(num_epochs):
     val_loss /= len(val_dataloader)
     val_accuracy = 100 * correct / len(val_dataset)
     print(f"Epoch [{epoch+1}/{num_epochs}], Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%")
+    val_loss_values.append(val_loss)
+    val_accuracy_values.append(val_accuracy)
 
 print("Finished Training")
 
@@ -97,9 +101,19 @@ print("Finished Training")
 torch.save(model.state_dict(), 'resnet50_finetuned.pth')
 
 # Plot the loss values
-plt.plot(loss_values)
-plt.xlabel("Step (x10)")
+plt.plot(loss_values, label="Training Loss")
+plt.plot(val_loss_values, label="Validation Loss")
+plt.xlabel("Epoch")
 plt.ylabel("Loss")
-plt.title("Training Loss")
+plt.title("Training and Validation Loss")
+plt.legend()
 plt.savefig("graphs/train_cnn_loss.png")
+plt.close()
+
+# Plot the validation accuracy values
+plt.plot(val_accuracy_values)
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.title("Validation Accuracy")
+plt.savefig("graphs/train_cnn_accuracy.png")
 plt.close()
