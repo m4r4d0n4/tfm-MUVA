@@ -6,8 +6,8 @@ import torch.optim as optim
 import torch
 import time
 from torch.utils.data import DataLoader
-from ..model.siameseAdaptative import SiameseArtNet, AdaptiveTripletLoss
-from ..dataset.datasetNoresize import WikiArtTripletDatasetNoResize
+from model.siameseAdaptative import SiameseArtNet, AdaptiveTripletLoss
+from dataset.datasetNoresize import WikiArtTripletDatasetNoResize
 import matplotlib.pyplot as plt
 import os
 
