@@ -2,6 +2,8 @@ import torch.nn as nn
 import torch
 from transformers import ViTModel, ViTConfig
 
+
+#SiameseVit basica 224x224
 class SiameseViT(nn.Module):
     def __init__(self):
         super(SiameseViT, self).__init__()

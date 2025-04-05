@@ -148,13 +148,13 @@ def main():
     db = EmbeddingDatabase()
     
     # Generate embeddings from a large image folder
-    db.generate_embeddings('/path/to/wikiart/images')
+    db.generate_embeddings('./wikiart_images')
     
     # Optional: Save the index for future use
-    db.save_index('wikiart_embeddings')
+    #db.save_index('wikiart_embeddings')
     
     # Search similar images
-    query_image = '/path/to/query/image.jpg'
+    query_image = './wikiart_images/test.jpg'
     similar_images = db.search_similar_images(query_image, top_k=5)
     
     print("Similar Artists:")
