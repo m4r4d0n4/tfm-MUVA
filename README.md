@@ -8,10 +8,11 @@ This project explores different deep learning architectures for artist attributi
 
 The project implements the following models:
 
-*   **Siamese Vision Transformer (SiameseViT):** A Siamese network based on the Vision Transformer architecture. This model learns to compare pairs of images and determine their similarity.
-*   **ResNet50 Multi-Class Classifier:** A ResNet50 model finetuned for multi-class classification of artists. This model learns to classify artworks based on their artist.
-*   **Siamese ResNet50:** A Siamese network based on the ResNet50 architecture. This model learns to compare pairs of images and determine their similarity.
-*   **Vision Transformer (ViT) Multi-Class Classifier:** A Vision Transformer model finetuned for multi-class classification of artists. This model learns to classify artworks based on their artist.
+*   **Siamese Vision Transformer (SiameseViT):** A Siamese network based on the Vision Transformer architecture (implemented in `model/siamvit.py`). This model learns to compare pairs of images and determine their similarity.
+*   **ResNet50 Multi-Class Classifier:** A ResNet50 model finetuned for multi-class classification of artists (implemented in `model/cnn_finetune.py`). This model learns to classify artworks based on their artist.
+*   **Siamese ResNet50:** A Siamese network based on the ResNet50 architecture (implemented in `model/siamese_resnet.py`). This model learns to compare pairs of images and determine their similarity.
+*   **Vision Transformer (ViT) Multi-Class Classifier:** A Vision Transformer model finetuned for multi-class classification of artists (implemented in `model/vit_finetune.py`). This model learns to classify artworks based on their artist.
+*   **Siamese ArtNet:** A Siamese network with adaptive triplet loss (implemented in `model/siameseAdaptative.py`). This model learns to compare pairs of images and determine their similarity.
 
 ## Dataset
 
@@ -39,6 +40,7 @@ To train the models, run the following scripts:
 *   `train_siamese_resnet.py`: Trains the Siamese ResNet50 model.
 *   `train_cnn.py`: Trains the ResNet50 multi-class classifier.
 *   `train_vit.py`: Trains the ViT multi-class classifier.
+*   `train_adapvit.py`: Trains the Siamese ArtNet model with adaptive triplet loss, using the `scripts/main_adapvit.py` script.
 
 ## Inference
 
