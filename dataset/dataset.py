@@ -21,32 +21,33 @@ import random
 
 class WikiArtTripletDataset(Dataset):
     def __init__(self, split="train", siamese=False, validation_split=0.2):
-        # Load the entire dataset
-        self.ds = load_dataset("huggan/wikiart", split="train")
-        
-        # Split the dataset into training and validation sets
-        split_ds = self.ds.train_test_split(test_size=validation_split, seed=42)
-        self.train_ds = split_ds['train']
-        self.val_ds = split_ds['test']
-        
-        # Select the appropriate split
+        # Load the training dataset
+        self.train_ds = load_dataset("huggan/wikiart", split="train")
+
+        # Split into training and validation sets
+        split_ds = self.train_ds.train_test_split(test_size=validation_split, seed=42)
+        self.train_ds = split_ds["train"]
+        self.val_ds = split_ds["test"]
+
         if split == "train":
             self.ds = self.train_ds
         elif split == "validation":
             self.ds = self.val_ds
         else:
             raise ValueError("Invalid split. Must be 'train' or 'validation'")
-        
-        self.artists = list(set(self.ds['artist']))
+
+        self.artists = list(set(self.ds["artist"]))
         self.artist_to_indices = {artist: [] for artist in self.artists}
         for i, item in enumerate(self.ds):
-            self.artist_to_indices[item['artist']].append(i)
-        
-        self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
+            self.artist_to_indices[item["artist"]].append(i)
+
+        self.transform = transforms.Compose(
+            [
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
         self.siamese = siamese
         self.rng = random.Random(42) # consistent results
 

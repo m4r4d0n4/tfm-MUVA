@@ -76,7 +76,7 @@ class WikiArtTripletDatasetNoResize(Dataset):
         return self.artists
 '''
 # Create DataLoader
-dataset = WikiArtTripletDataset()
+dataset = WikiArtTripletDatasetNoResize()
 #dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 for i in range(10):
     try:
