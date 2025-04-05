@@ -34,7 +34,7 @@ if not os.path.exists("graphs"):
     os.makedirs("graphs")
 
 # Training loop
-num_epochs = 10
+num_epochs = 300
 
 print("Training started")
 start_time = time.time()
@@ -91,6 +91,12 @@ for epoch in range(num_epochs):
     val_loss /= len(val_dataloader)
     val_accuracy = 100 * correct / len(val_dataset)
     print(f"Epoch [{epoch+1}/{num_epochs}], Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%")
+
+    # Save the model every 50 epochs
+    if (epoch + 1) % 50 == 0:
+        model_path = f"vit_finetuned_epoch_{epoch+1}.pth"
+        torch.save(model.state_dict(), model_path)
+        print(f"Model saved to {model_path}")
 
 print("Finished Training")
 
