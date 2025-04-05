@@ -38,6 +38,7 @@ print("Training started")
 
 # Store the loss values for plotting
 loss_values = []
+start_time = time.time()
 
 for epoch in range(num_epochs):
     epoch_start = time.time()  # Tiempo de inicio de la época
