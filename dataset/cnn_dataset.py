@@ -4,16 +4,32 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 class WikiArtCNNDataset(Dataset):
-    def __init__(self, split="train"):
-        self.ds = load_dataset("huggan/wikiart", split=split)
-        self.artists = list(set(self.ds['artist']))
+    def __init__(self, split="train", validation_split=0.2):
+        # Load the entire dataset
+        self.ds = load_dataset("huggan/wikiart", split="train")
+
+        # Split into training and validation sets
+        split_ds = self.ds.train_test_split(test_size=validation_split, seed=42)
+        train_ds = split_ds["train"]
+        val_ds = split_ds["test"]
+
+        self.artists = list(set(self.ds["artist"]))
         self.artist_to_index = {artist: i for i, artist in enumerate(self.artists)}
-        
-        self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
+
+        if split == "train":
+            self.ds = train_ds
+        elif split == "validation":
+            self.ds = val_ds
+        else:
+            raise ValueError("Invalid split. Must be 'train' or 'validation'")
+
+        self.transform = transforms.Compose(
+            [
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
 
     def __len__(self):
         return len(self.ds)
@@ -26,6 +42,9 @@ class WikiArtCNNDataset(Dataset):
 
     def get_num_classes(self):
         return len(self.artists)
+
+    def get_artists(self):
+        return self.artists
 
 # Example usage:
 if __name__ == '__main__':
