@@ -1,159 +1,175 @@
 import torch
-import numpy as np
+import torch.nn as nn
+from torchvision import transforms
 from PIL import Image
-import torchvision.transforms as transforms
-from typing import List, Tuple
+import os
+import numpy as np
+from sklearn.neighbors import KernelDensity
+from sklearn.metrics import roc_curve
+import matplotlib.pyplot as plt
+import random
 
-from inference import load_model, preprocess_image, compute_image_embedding
+def load_model(model_name, model_paths, device, num_classes=None):
+    """
+    Loads a trained model from the specified path.
+    """
+    if model_name not in model_paths:
+        raise ValueError(f"Model path not found for model name: {model_name}")
 
-class FewShotEvaluator:
-    def __init__(self, database_path: str, model_name: str, num_classes: int = 5, num_support: int = 3, num_query: int = 15):
-        """
-        Initializes the FewShotEvaluator.
+    model_path = model_paths[model_name]
 
-        Args:
-            database_path (str): Path to the embedding database (.npz file).
-            model_name (str): Name of the model to use for embedding calculation ('siamese_vit', 'resnet50', 'siamese_resnet').
-            num_classes (int): Number of classes to evaluate.
-            num_support (int): Number of support images per class.
-            num_query (int): Number of query images per class.
-        """
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.database_path = database_path
-        self.model_name = model_name
-        self.num_classes = num_classes
-        self.num_support = num_support
-        self.num_query = num_query
-        self.support_images = [[] for _ in range(num_classes)]  # List of lists to store support images for each class
-        self.query_images = [[] for _ in range(num_classes)]  # List of lists to store query images for each class
-        self.class_names = [f"artist_{i}" for i in range(num_classes)] # Assign class names
+    if model_name == "cnn_finetune":
+        from model.cnn_finetune import ResNet50FineTune
+        model = ResNet50FineTune(num_classes=num_classes)
+    elif model_name == "siameseAdaptative":
+        from model.siameseAdaptative import SiameseArtNet
+        model = SiameseArtNet()
+    elif model_name == "siamese_resnet":
+        from model.siamese_resnet import SiameseResNet50
+        model = SiameseResNet50()
+    elif model_name == "siamvit":
+        from model.siamvit import SiameseViT
+        model = SiameseViT()
+    elif model_name == "vit_finetune":
+        from model.vit_finetune import ViTFineTune
+        model = ViTFineTune(num_classes=num_classes)
+    elif model_name == "vit_scratch":
+        from model.vit_scratch import ViTScratch
+        model = ViTScratch(num_classes=num_classes)
+    else:
+        raise ValueError(f"Unknown model name: {model_name}")
 
-        # Load the model
-        self.model = load_model(model_type=self.model_name).to(self.device)
-        self.model.eval()
+    model = model.to(device)
+    model.load_state_dict(torch.load(model_path, map_location=device))
+    model.eval()  # Set the model to evaluation mode
 
-        # Load the embedding database
-        try:
-            database = np.load(self.database_path)
-            self.embeddings = database['embeddings']
-            self.artists = database['artists']
-            self.image_ids = database['image_ids']
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Embedding database not found at {self.database_path}")
+    return model
 
-        # Add support images to the database
-        self.add_support_set_to_database()
+def load_dataset(author_dir, model_name, image_size=(224, 224)):
+    """
+    Loads the dataset from the specified author directory.
+    """
+    support_dir = os.path.join(author_dir, "support")
+    query_dir = os.path.join(author_dir, "query")
 
-    def add_support_image(self, class_index: int, image_path: str):
-        """Adds a support image to the specified class."""
-        if len(self.support_images[class_index]) < self.num_support:
-            self.support_images[class_index].append(image_path)
-        else:
-            print(f"Support set for class {class_index} is full.")
+    support_images = []
+    query_images = []
 
-    def add_query_image(self, class_index: int, image_path: str):
-        """Adds a query image to the specified class."""
-        if len(self.query_images[class_index]) < self.num_query:
-            self.query_images[class_index].append(image_path)
-        else:
-            print(f"Query set for class {class_index} is full.")
+    if model_name == "siameseAdaptative":
+        transform = transforms.Compose([])
+    else:
+        transform = transforms.Compose([
+            transforms.Resize(image_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
 
-    def add_support_set_to_database(self):
-        """Adds the support set images to the embedding database."""
-        for class_index in range(self.num_classes):
-            for image_path in self.support_images[class_index]:
-                image = preprocess_image(image_path).to(self.device)
-                embedding = compute_image_embedding(self.model, image, self.model_name).cpu().numpy()
+    for filename in os.listdir(support_dir):
+        if filename.endswith(".jpg") or filename.endswith(".png"):
+            img_path = os.path.join(support_dir, filename)
+            img = Image.open(img_path).convert("RGB")
+            img = transform(img)
+            support_images.append(img)
 
-                # Add the embedding, artist (class name), and image ID to the database
-                self.embeddings = np.vstack((self.embeddings, embedding))
-                self.artists = np.append(self.artists, self.class_names[class_index])
-                self.image_ids = np.append(self.image_ids, -1)  # Use -1 as a placeholder for support images
+    for filename in os.listdir(query_dir):
+        if filename.endswith(".jpg") or filename.endswith(".png"):
+            img_path = os.path.join(query_dir, filename)
+            img = Image.open(img_path).convert("RGB")
+            img = transform(img)
+            query_images.append(img)
 
-    def evaluate(self):
-        """Evaluates the query images by extracting their embeddings."""
-        query_embeddings = []
-        for class_index in range(self.num_classes):
-            for image_path in self.query_images[class_index]:
-                image = preprocess_image(image_path).to(self.device)
-                embedding = compute_image_embedding(self.model, image, self.model_name).cpu().numpy()
-                query_embeddings.append(embedding)
+    return torch.stack(support_images), torch.stack(query_images)
 
-        # For now, just print the number of query embeddings
-        print(f"Number of query embeddings: {len(query_embeddings)}")
+def extract_embeddings(model, images, device):
+    """
+    Extracts embeddings from the images using the loaded model.
+    """
+    model.eval()
+    model.to(device)
+    with torch.no_grad():
+        embeddings = []
+        for image in images:
+            image = image.unsqueeze(0)  # Add batch dimension
+            embedding = model.forward_one(image.to(device))
+            embeddings.append(embedding.cpu().numpy())
+        embeddings = np.concatenate(embeddings, axis=0)  # Concatenate embeddings
+    return embeddings
 
-        accuracy = self.calculate_accuracy(query_embeddings, self.embeddings, self.artists, self.class_names, self.num_classes, self.num_query)
-        map_at_k = self.calculate_mean_average_precision(query_embeddings, self.embeddings, self.artists, self.class_names, self.num_classes, self.num_query)
-        generalization_gap = self.calculate_generalization_gap(query_embeddings, self.embeddings, self.artists, self.class_names, self.num_classes, self.num_query)
+def apply_kde(support_embeddings, query_embedding):
+    """
+    Applies the KDE algorithm to calculate the log-probability of the query embedding
+    belonging to the same class as the support embeddings.
+    """
+    kde = KernelDensity(kernel='gaussian', bandwidth=0.5).fit(support_embeddings)
+    log_prob = kde.score_samples(query_embedding.reshape(1, -1))[0]
+    return log_prob
 
-        print(f"Few-Shot Accuracy: {accuracy}")
-        print(f"Mean Average Precision (mAP@K): {map_at_k}")
-        print(f"Few-Shot Generalization Gap: {generalization_gap}")
+def evaluate(model_name, dataset_dir, model_paths, device="cuda" if torch.cuda.is_available() else "cpu"):
+    """
+    Evaluates the model on the dataset using KDE.
+    """
+    # Calculate the number of authors
+    num_authors = len([d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d)) and d.startswith("author_")])
+    num_classes = num_authors  # Set num_classes to the number of authors
+    device = torch.device(device)
+    model = load_model(model_name, model_paths, device, num_classes=num_classes)
 
-    def calculate_accuracy(self, query_embeddings: List[np.ndarray], embeddings: np.ndarray, artists: np.ndarray, class_names: List[str], num_classes: int, num_query: int, k: int = 1) -> float:
-        """Calculates the few-shot accuracy (N-shot-K-way)."""
-        correct = 0
-        total = 0
-        for class_index in range(num_classes):
-            for i in range(num_query):
-                query_embedding = query_embeddings[class_index * num_query + i]
-                # Calculate distances to all embeddings in the database
-                distances = np.linalg.norm(embeddings - query_embedding, axis=1)
-                # Get the indices of the k-nearest neighbors
-                knn_indices = np.argsort(distances)[:k]
-                # Get the predicted class names of the k-nearest neighbors
-                knn_labels = artists[knn_indices]
-                # Determine the most frequent class among the k-nearest neighbors
-                predicted_class = np.argmax(np.bincount(np.array([class_names.index(label) for label in knn_labels])))
-                # Check if the prediction is correct
-                if predicted_class == class_index:
-                    correct += 1
-                total += 1
-        return correct / total
+    all_labels = []
+    all_log_probs = []
 
-    def calculate_mean_average_precision(self, query_embeddings: List[np.ndarray], embeddings: np.ndarray, artists: np.ndarray, class_names: List[str], num_classes: int, num_query: int, k: int = 10) -> float:
-        """Calculates the Mean Average Precision (mAP@K)."""
-        map_sum = 0
-        for class_index in range(num_classes):
-            ap_sum = 0
-            for i in range(num_query):
-                query_embedding = query_embeddings[class_index * num_query + i]
-                # Calculate distances to all embeddings in the database
-                distances = np.linalg.norm(embeddings - query_embedding, axis=1)
-                # Get the indices of the k-nearest neighbors
-                knn_indices = np.argsort(distances)[:k]
-                # Get the predicted class names of the k-nearest neighbors
-                knn_labels = artists[knn_indices]
-                # Calculate precision at each rank
-                precision_sum = 0
-                num_correct = 0
-                for j in range(k):
-                    if class_names.index(artists[class_index * num_query + i]) == np.argmax(np.bincount(np.array([class_names.index(label) for label in knn_labels[:j+1]]))):
-                        num_correct += 1
-                    precision_sum += num_correct / (j + 1)
-                ap_sum += precision_sum / k
-            map_sum += ap_sum / num_query
-        return map_sum / num_classes
+    for i in range(1, num_authors + 1):
+        positive_author_dir = os.path.join(dataset_dir, f"author_{i}")
+        negative_author_index = i + 8
+        if negative_author_index > num_authors:
+            negative_author_index -= num_authors
+        negative_author_dir = os.path.join(dataset_dir, f"author_{negative_author_index}")
 
-    def calculate_generalization_gap(self, query_embeddings: List[np.ndarray], embeddings: np.ndarray, artists: np.ndarray, class_names: List[str], num_classes: int, num_query: int, k: int = 1) -> float:
-        """Calculates the Few-Shot Generalization Gap."""
-        accuracy = self.calculate_accuracy(query_embeddings, embeddings, artists, class_names, num_classes, num_query, k)
-        # For now, assume a fixed baseline accuracy (replace with actual baseline if available)
-        baseline_accuracy = 0.5
-        return accuracy - baseline_accuracy
+        support_images, _ = load_dataset(positive_author_dir, model_name)
+        _, positive_query_images = load_dataset(positive_author_dir, model_name)
+        _, negative_query_images = load_dataset(negative_author_dir, model_name)
 
-if __name__ == '__main__':
-    # Example usage
-    evaluator = FewShotEvaluator(database_path="wikiart_embeddings.npz", model_name="siamese_resnet")
+        support_embeddings = extract_embeddings(model, support_images, device)
+        positive_query_embeddings = extract_embeddings(model, positive_query_images, device)
+        negative_query_embeddings = extract_embeddings(model, negative_query_images, device)
 
-    # Add support images (replace with actual image paths)
-    for i in range(evaluator.num_classes):
-        for j in range(evaluator.num_support):
-            evaluator.add_support_image(i, f"support_image_class_{i}_{j}.jpg")
+        # Apply KDE to each query image
+        for query_embedding in positive_query_embeddings:
+            log_prob = apply_kde(support_embeddings, query_embedding)
+            all_log_probs.append(log_prob)
+            all_labels.append(1)  # Positive label
 
-    # Add query images (replace with actual image paths)
-    for i in range(evaluator.num_classes):
-        for j in range(evaluator.num_query):
-            evaluator.add_query_image(i, f"query_image_class_{i}_{j}.jpg")
+        for query_embedding in negative_query_embeddings:
+            log_prob = apply_kde(support_embeddings, query_embedding)
+            all_log_probs.append(log_prob)
+            all_labels.append(0)  # Negative label
 
-    evaluator.evaluate()
+        return all_labels, all_log_probs
+
+
+def plot_roc_curve(labels, log_probs, model_name):
+    """
+    Plots the ROC curve.
+    """
+    fpr, tpr, thresholds = roc_curve(labels, log_probs)
+    plt.plot(fpr, tpr, label=f'{model_name} ROC')
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curve')
+    plt.legend()
+    plt.savefig(f"roc_curve_{model_name}.png")
+    plt.show()
+
+if __name__ == "__main__":
+    model_name = "cnn_finetune"  # Change this to the model you want to evaluate
+    dataset_dir = "eval_dataset"
+    model_paths = {  # Replace with the actual paths to the trained models
+        "cnn_finetune": "cnn_finetune.pth",
+        "siameseAdaptative": "siameseAdaptative.pth",
+        "siamese_resnet": "siamese_resnet.pth",
+        "siamvit": "siamvit.pth",
+        "vit_finetune": "vit_finetune.pth",
+        "vit_scratch": "vit_scratch.pth",
+    }
+    labels, log_probs = evaluate(model_name, dataset_dir, model_paths)
+    plot_roc_curve(labels, log_probs, model_name)
